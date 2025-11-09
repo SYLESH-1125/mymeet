@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import { useTeacherStream } from '@/hooks/useTeacherStream';
+import { useWebRTCBroadcast } from '@/hooks/useWebRTCBroadcast';
+import { useAuth } from '@/hooks/useAuth';
 import { Mic, Monitor, Video } from 'lucide-react';
 
 interface TeacherStreamViewerProps {
@@ -10,26 +12,54 @@ interface TeacherStreamViewerProps {
 }
 
 export default function TeacherStreamViewer({ roomId, teacherName }: TeacherStreamViewerProps) {
+  const { user } = useAuth();
   const { teacherStream } = useTeacherStream(roomId);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { remoteStream, connectToTeacher } = useWebRTCBroadcast(
+    roomId, 
+    false, 
+    user?.displayName || 'Student'
+  );
 
   // Get the display name from teacherStream or use the passed name
   const displayName = teacherStream.teacherName || teacherName;
 
+  // Connect to teacher when component mounts
+  useEffect(() => {
+    connectToTeacher();
+  }, []);
+
+  // Set video source when remote stream is available
+  useEffect(() => {
+    if (videoRef.current && remoteStream) {
+      videoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
   return (
     <div className="relative w-full h-full bg-zinc-900 flex flex-col items-center justify-center">
-      {/* Teacher Status Display */}
-      <div className="text-center">
-        <div className="w-32 h-32 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-5xl font-bold text-white">
-            {displayName.charAt(0).toUpperCase()}
-          </span>
+      {/* Video Display */}
+      {remoteStream ? (
+        <div className="w-full h-full flex items-center justify-center">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="max-w-full max-h-full rounded-lg shadow-2xl"
+          />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">{displayName}</h2>
-        <p className="text-zinc-400 mb-4">Teacher</p>
+      ) : (
+        <div className="text-center">
+          <div className="w-32 h-32 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-5xl font-bold text-white">
+              {displayName.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">{displayName}</h2>
+          <p className="text-zinc-400 mb-4">Teacher</p>
 
-        {/* Live Status Indicators */}
-        <div className="space-y-2">
+          {/* Live Status Indicators */}
+          <div className="space-y-2">
           {teacherStream.audioEnabled && (
             <div className="flex items-center justify-center gap-2 text-green-400 animate-pulse">
               <Mic className="w-4 h-4" />
@@ -52,7 +82,8 @@ export default function TeacherStreamViewer({ roomId, teacherName }: TeacherStre
             <p className="text-zinc-500 text-sm">Waiting for teacher to start presenting...</p>
           )}
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Status badges on corners */}
       {teacherStream.audioEnabled && (

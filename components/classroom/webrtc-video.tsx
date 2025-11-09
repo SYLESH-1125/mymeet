@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Monitor, MonitorOff, Video, VideoOff } from 'lucide-react';
 import { useTeacherStream } from '@/hooks/useTeacherStream';
+import { useWebRTCBroadcast } from '@/hooks/useWebRTCBroadcast';
 
 interface WebRTCVideoProps {
   roomId: string;
@@ -20,6 +21,7 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
   const localStreamRef = useRef<MediaStream | null>(null);
   
   const { teacherStream, updateTeacherStream } = useTeacherStream(roomId);
+  const { startBroadcast } = useWebRTCBroadcast(roomId, isTeacher, userName);
 
   // Set teacher name in Firestore when component mounts
   useEffect(() => {
@@ -105,6 +107,8 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
         // Notify students that teacher's video is on
         if (isTeacher) {
           updateTeacherStream({ videoEnabled: true, shareType: 'camera' });
+          // Start broadcasting to students
+          startBroadcast(localStreamRef.current);
         }
       } catch (error) {
         console.error('Error accessing camera:', error);
@@ -156,6 +160,8 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
         // Notify students that teacher is sharing screen
         if (isTeacher) {
           updateTeacherStream({ isSharing: true, shareType: 'screen' });
+          // Start broadcasting screen to students
+          startBroadcast(stream);
         }
         
         // Handle when user stops sharing from browser UI

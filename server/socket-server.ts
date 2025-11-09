@@ -274,6 +274,46 @@ export async function initializeSocketServer(httpServer: HTTPServer) {
       debouncers.set(batchKey, timer);
     });
 
+    // ==================== WebRTC Signaling ====================
+    
+    // Join class room for WebRTC
+    socket.on('join-class', (classId: string) => {
+      socket.join(classId);
+      console.log(`🎥 Socket ${socket.id} joined class ${classId} for WebRTC`);
+      socket.to(classId).emit('user-joined', socket.id);
+    });
+
+    // Teacher sending offer to all students
+    socket.on('teacher-offer', ({ classId, offer }: { classId: string; offer: RTCSessionDescriptionInit }) => {
+      console.log('📹 Teacher sending offer to class:', classId);
+      socket.to(classId).emit('teacher-offer', { offer, teacherId: socket.id });
+    });
+
+    // Student sending answer to teacher
+    socket.on('student-answer', ({ classId, answer, teacherId }: { classId: string; answer: RTCSessionDescriptionInit; teacherId: string }) => {
+      console.log('📹 Student sending answer to teacher');
+      io.to(teacherId).emit('student-answer', { answer, studentId: socket.id });
+    });
+
+    // ICE candidate exchange
+    socket.on('ice-candidate', ({ classId, candidate, targetId }: { classId: string; candidate: RTCIceCandidateInit; targetId?: string }) => {
+      if (targetId) {
+        // Send to specific peer
+        io.to(targetId).emit('ice-candidate', { candidate, senderId: socket.id });
+      } else {
+        // Broadcast to room
+        socket.to(classId).emit('ice-candidate', { candidate, senderId: socket.id });
+      }
+    });
+
+    // Teacher starts broadcasting
+    socket.on('start-broadcast', (classId: string) => {
+      console.log('📺 Teacher starting broadcast in class:', classId);
+      socket.to(classId).emit('teacher-started-broadcast', socket.id);
+    });
+
+    // ==================== End WebRTC Signaling ====================
+
     // Room state changes (no batching needed)
     socket.on('room:stateChange', ({ roomId, state }) => {
       socket.to(roomId).emit('room:stateUpdate', state);
