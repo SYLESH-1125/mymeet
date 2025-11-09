@@ -9,6 +9,8 @@ interface TeacherStream {
   shareType: 'none' | 'screen' | 'camera' | 'both';
   audioEnabled: boolean;
   videoEnabled: boolean;
+  teacherName?: string;
+  teacherUid?: string;
 }
 
 export function useTeacherStream(classId: string) {

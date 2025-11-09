@@ -21,6 +21,13 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
   
   const { teacherStream, updateTeacherStream } = useTeacherStream(roomId);
 
+  // Set teacher name in Firestore when component mounts
+  useEffect(() => {
+    if (isTeacher && userName) {
+      updateTeacherStream({ teacherName: userName });
+    }
+  }, [isTeacher, userName, updateTeacherStream]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {

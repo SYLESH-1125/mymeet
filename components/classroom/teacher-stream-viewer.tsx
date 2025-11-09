@@ -13,16 +13,19 @@ export default function TeacherStreamViewer({ roomId, teacherName }: TeacherStre
   const { teacherStream } = useTeacherStream(roomId);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Get the display name from teacherStream or use the passed name
+  const displayName = teacherStream.teacherName || teacherName;
+
   return (
     <div className="relative w-full h-full bg-zinc-900 flex flex-col items-center justify-center">
       {/* Teacher Status Display */}
       <div className="text-center">
         <div className="w-32 h-32 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
           <span className="text-5xl font-bold text-white">
-            {teacherName.charAt(0).toUpperCase()}
+            {displayName.charAt(0).toUpperCase()}
           </span>
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">{teacherName}</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">{displayName}</h2>
         <p className="text-zinc-400 mb-4">Teacher</p>
 
         {/* Live Status Indicators */}
