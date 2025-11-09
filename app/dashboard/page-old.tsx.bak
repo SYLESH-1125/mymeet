@@ -1,0 +1,199 @@
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Code2, Plus, LogIn } from "lucide-react"
+
+export default function DashboardPage() {
+  const router = useRouter()
+  const [userRole, setUserRole] = useState<"teacher" | "student">("student")
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showJoinDialog, setShowJoinDialog] = useState(false)
+  const [className, setClassName] = useState("")
+  const [classCode, setClassCode] = useState("")
+  const [generatedCode, setGeneratedCode] = useState("")
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    const role = localStorage.getItem("userRole") as "teacher" | "student"
+    if (role) {
+      setUserRole(role)
+    }
+  }, [])
+
+  const generateClassCode = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    let code = ""
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return code
+  }
+
+  const handleCreateClass = (e: React.FormEvent) => {
+    e.preventDefault()
+    const code = generateClassCode()
+    setGeneratedCode(code)
+    // Navigate to classroom with the generated code
+    router.push(`/classroom/${code}`)
+  }
+
+  const handleJoinClass = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (classCode.trim()) {
+      router.push(`/classroom/${classCode.toUpperCase()}`)
+    }
+  }
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(generatedCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <Code2 className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-xl text-foreground">CodeClass</span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground capitalize">{userRole}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                localStorage.removeItem("userRole")
+                router.push("/login")
+              }}
+            >
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-16">
+        <div className="max-w-2xl mx-auto space-y-8">
+          <div className="text-center space-y-4">
+            <h1 className="text-4xl font-bold text-foreground">Welcome to CodeClass</h1>
+            <p className="text-lg text-muted-foreground">
+              {userRole === "teacher"
+                ? "Create a new class or join an existing one"
+                : "Join a class using the class code from your teacher"}
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {userRole === "teacher" && (
+              <Card
+                className="hover:border-primary/50 transition-colors cursor-pointer"
+                onClick={() => setShowCreateDialog(true)}
+              >
+                <CardHeader>
+                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                    <Plus className="w-6 h-6 text-primary" />
+                  </div>
+                  <CardTitle>Create Class</CardTitle>
+                  <CardDescription>Start a new coding class session with video, code editor, and chat</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full" onClick={() => setShowCreateDialog(true)}>
+                    Create New Class
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card
+              className={`hover:border-primary/50 transition-colors cursor-pointer ${userRole === "student" ? "md:col-span-2" : ""}`}
+              onClick={() => setShowJoinDialog(true)}
+            >
+              <CardHeader>
+                <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
+                  <LogIn className="w-6 h-6 text-accent" />
+                </div>
+                <CardTitle>Join Class</CardTitle>
+                <CardDescription>Enter a class code to join an existing coding session</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full bg-transparent" onClick={() => setShowJoinDialog(true)}>
+                  Join with Code
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Create Class Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Class</DialogTitle>
+            <DialogDescription>
+              Give your class a name. A unique class code will be generated for students to join.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateClass} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="className">Class Name</Label>
+              <Input
+                id="className"
+                placeholder="e.g., Introduction to React"
+                value={className}
+                onChange={(e) => setClassName(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              Create Class
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Join Class Dialog */}
+      <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Join Class</DialogTitle>
+            <DialogDescription>Enter the 6-character class code provided by your teacher</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleJoinClass} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="classCode">Class Code</Label>
+              <Input
+                id="classCode"
+                placeholder="e.g., ABC123"
+                value={classCode}
+                onChange={(e) => setClassCode(e.target.value.toUpperCase())}
+                maxLength={6}
+                className="uppercase text-center text-2xl tracking-widest font-mono"
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              Join Class
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
