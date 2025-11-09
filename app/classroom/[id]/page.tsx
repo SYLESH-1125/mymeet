@@ -6,19 +6,35 @@ import { Button } from "@/components/ui/button"
 import { TeacherView } from "@/components/classroom/teacher-view"
 import { StudentView } from "@/components/classroom/student-view"
 import { Code2, Copy, Check } from "lucide-react"
+import { getClassInfo } from "@/lib/classApi"
 
 export default function ClassroomPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [copied, setCopied] = useState(false)
   const [userRole, setUserRole] = useState<"teacher" | "student">("student")
+  const [classCode, setClassCode] = useState<string>('')
 
   useEffect(() => {
     const role = localStorage.getItem("userRole") as "teacher" | "student"
     if (role) setUserRole(role)
-  }, [])
+    
+    // Fetch the actual class code from Firestore
+    const fetchClassCode = async () => {
+      try {
+        const classInfo = await getClassInfo(id)
+        if (classInfo) {
+          setClassCode(classInfo.code)
+        }
+      } catch (error) {
+        console.error('Error fetching class code:', error)
+      }
+    }
+    
+    fetchClassCode()
+  }, [id])
 
   const copyClassCode = () => {
-    navigator.clipboard.writeText(id)
+    navigator.clipboard.writeText(classCode || id)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -35,7 +51,7 @@ export default function ClassroomPage({ params }: { params: Promise<{ id: string
           <div>
             <div className="flex items-center gap-3">
               <p className="text-sm text-zinc-400">
-                Class Code: <span className="font-mono font-semibold text-white ml-1">{id}</span>
+                Class Code: <span className="font-mono font-semibold text-white ml-1">{classCode || 'Loading...'}</span>
               </p>
               <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-zinc-800" onClick={copyClassCode}>
                 {copied ? (
