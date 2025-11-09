@@ -92,7 +92,7 @@ export default function JitsiFrame({
           configOverwrite: {
             // SFU Bandwidth & CPU Control
             disableDeepLinking: true,
-            prejoinPageEnabled: false, // CRITICAL: Skip prejoin completely
+            prejoinPageEnabled: false, // CRITICAL: Skip prejoin completely for EVERYONE
             enableLayerSuspension: true,
             resolution: isModerator ? 720 : 360, // Lower res for students
             constraints: {
@@ -100,19 +100,21 @@ export default function JitsiFrame({
                 height: { ideal: 720, max: 720 },
                 frameRate: { max: 24 },
               } : false, // NO video for students
-              audio: isModerator, // Only moderators get audio initially
+              audio: true, // Allow audio for everyone (teachers can use mic)
             },
             disableSimulcast: !isModerator, // Simulcast only for teachers
             enableNoAudioDetection: true,
             enableNoisyMicDetection: true,
             channelLastN: 1, // Students receive only 1 active stream (teacher)
             
-            // KEY FIX: Different configs for teacher vs student
-            startWithAudioMuted: true, // Everyone starts muted
-            startWithVideoMuted: true, // Everyone starts without video
+            // KEY FIX: Everyone joins directly, no prejoin screen
+            startWithAudioMuted: !isModerator, // Only students muted
+            startWithVideoMuted: !isModerator, // Only students without video initially
             startAudioOnly: !isModerator, // Students are audio-only
-            startSilent: !isModerator, // Students: no permission dialogs
-            disableInitialGUM: !isModerator, // Students: no getUserMedia at all
+            
+            // CRITICAL: No permission dialogs for ANYONE on join
+            startSilent: true, // Skip ALL permission prompts on join
+            disableInitialGUM: true, // Don't request devices on join
             
             disableTileView: true,
             
@@ -142,11 +144,11 @@ export default function JitsiFrame({
             // Recording off by default
             recordingService: { enabled: false },
             
-            // Critical: Skip all prompts and device checks
+            // Critical: Skip all prompts and device checks for EVERYONE
             disableAP: true, // Disable audio processing detection
             disableNS: true, // Disable noise suppression prompt
             disableAGC: true, // Disable auto gain control prompt
-            startWithoutMediaPermissions: !isModerator, // Students join without any media
+            startWithoutMediaPermissions: true, // Join without media for EVERYONE initially
           },
           interfaceConfigOverwrite: {
             TILE_VIEW_MAX_COLUMNS: 1,
@@ -173,8 +175,8 @@ export default function JitsiFrame({
             TOOLBAR_BUTTONS: isModerator
               ? [
                   'microphone',
-                  'camera',
-                  'desktop',
+                  // 'camera', // REMOVED - no camera button
+                  'desktop', // Screen share only
                   'fullscreen',
                   'hangup',
                   'chat',
@@ -188,7 +190,7 @@ export default function JitsiFrame({
                   'mute-everyone',
                   'mute-video-everyone',
                 ]
-              : ['microphone', 'fullscreen', 'hangup', 'raisehand'], // Students: NO camera button
+              : ['microphone', 'fullscreen', 'hangup', 'raisehand'], // Students: audio only
             FILM_STRIP_MAX_HEIGHT: isModerator ? 120 : 0,
             VERTICAL_FILMSTRIP: false,
             VIDEO_LAYOUT_FIT: 'contain',
@@ -204,10 +206,14 @@ export default function JitsiFrame({
           setIsLoading(false);
           if (onReady) onReady();
 
-          // Pin teacher on join (spotlight mode)
+          // For teachers: automatically enable camera and mic after joining (no prejoin needed)
           if (isModerator) {
-            console.log('✅ Moderator joined with full permissions');
-            // Teacher can enable camera manually after joining
+            console.log('✅ Moderator joined - enabling mic only (no camera)');
+            // Small delay to ensure conference is fully ready
+            setTimeout(() => {
+              api.executeCommand('toggleAudio'); // Unmute mic
+              // NO camera toggle - removed as per user request
+            }, 500);
           } else {
             // Students see tile view disabled, only receive teacher stream
             api.executeCommand('setTileView', false);
