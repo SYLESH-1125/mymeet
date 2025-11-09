@@ -44,6 +44,7 @@ export default function JitsiFrame({
   const containerRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<JitsiMeetAPI | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPresenting, setIsPresenting] = useState(false); // Track if teacher is presenting
 
   // Check if user is a moderator
   const isModerator = userEmail && MODERATOR_EMAILS.includes(userEmail.toLowerCase());
@@ -69,15 +70,16 @@ export default function JitsiFrame({
 
     const initializeJitsi = async () => {
       try {
-        // Add small delay to prevent UI freeze
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // CRITICAL: Add 2 second delay to let React render first
+        // This prevents the permission prompt from blocking the UI
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         await loadJitsiScript();
 
         if (!containerRef.current) return;
 
         console.log(`🎥 Initializing Jitsi - Role: ${isModerator ? 'TEACHER' : 'STUDENT'}`);
-        console.log(`📋 Config - startSilent: ${!isModerator}, disableInitialGUM: ${!isModerator}`);
+        console.log(`📋 Config - Delayed load to prevent UI freeze`);
 
         const options = {
           roomName: roomName,
@@ -94,23 +96,15 @@ export default function JitsiFrame({
             disableDeepLinking: true,
             prejoinPageEnabled: false, // CRITICAL: Skip prejoin completely for EVERYONE
             enableLayerSuspension: true,
-            resolution: isModerator ? 720 : 360, // Lower res for students
+            resolution: 360, // Lower resolution for everyone initially
             constraints: {
-              video: isModerator ? {
-                height: { ideal: 720, max: 720 },
-                frameRate: { max: 24 },
-              } : false, // NO video for students
-              audio: true, // Allow audio for everyone (teachers can use mic)
+              video: false, // NO video for anyone on join
+              audio: false, // NO audio for anyone on join
             },
             disableSimulcast: !isModerator, // Simulcast only for teachers
             enableNoAudioDetection: true,
             enableNoisyMicDetection: true,
             channelLastN: 1, // Students receive only 1 active stream (teacher)
-            
-            // KEY FIX: Everyone joins directly, no prejoin screen
-            startWithAudioMuted: !isModerator, // Only students muted
-            startWithVideoMuted: !isModerator, // Only students without video initially
-            startAudioOnly: !isModerator, // Students are audio-only
             
             // CRITICAL: No permission dialogs for ANYONE on join
             startSilent: true, // Skip ALL permission prompts on join
@@ -149,6 +143,11 @@ export default function JitsiFrame({
             disableNS: true, // Disable noise suppression prompt
             disableAGC: true, // Disable auto gain control prompt
             startWithoutMediaPermissions: true, // Join without media for EVERYONE initially
+            
+            // Force everyone to join without any media
+            startWithAudioMuted: true, // EVERYONE muted on join
+            startWithVideoMuted: true, // EVERYONE no video on join
+            startAudioOnly: true, // Audio-only mode for all initially
           },
           interfaceConfigOverwrite: {
             TILE_VIEW_MAX_COLUMNS: 1,
@@ -206,14 +205,10 @@ export default function JitsiFrame({
           setIsLoading(false);
           if (onReady) onReady();
 
-          // For teachers: automatically enable camera and mic after joining (no prejoin needed)
+          // NX-MEET Style: Join as VIEWER first, activate media later with "Present Now"
           if (isModerator) {
-            console.log('✅ Moderator joined - enabling mic only (no camera)');
-            // Small delay to ensure conference is fully ready
-            setTimeout(() => {
-              api.executeCommand('toggleAudio'); // Unmute mic
-              // NO camera toggle - removed as per user request
-            }, 500);
+            console.log('✅ Teacher joined as viewer - waiting for "Present Now" button');
+            // DO NOT auto-enable anything - wait for user action
           } else {
             // Students see tile view disabled, only receive teacher stream
             api.executeCommand('setTileView', false);
@@ -312,5 +307,21 @@ export const jitsiControls = {
   hangup: () => {
     const api = (window as any).jitsiAPI;
     if (api) api.executeCommand('hangup');
+  },
+  // NX-MEET Style "Present Now" - activate camera and mic together
+  startPresenting: () => {
+    const api = (window as any).jitsiAPI;
+    if (api) {
+      console.log('🎬 Starting presentation - enabling audio');
+      api.executeCommand('toggleAudio'); // Unmute mic
+      // Camera removed per user request - audio + screenshare only
+    }
+  },
+  stopPresenting: () => {
+    const api = (window as any).jitsiAPI;
+    if (api) {
+      console.log('⏸️ Stopping presentation - muting audio');
+      api.executeCommand('toggleAudio'); // Mute mic
+    }
   },
 };

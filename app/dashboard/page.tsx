@@ -35,6 +35,9 @@ export default function DashboardPage() {
     try {
       const { classId, code } = await createClass(user.uid);
       setShowCreateDialog(false);
+      // Set as teacher
+      localStorage.setItem('userRole', 'teacher');
+      // Direct join - no lobby
       router.push(`/classroom/${classId}`);
     } catch (error) {
       console.error('Failed to create class:', error);
@@ -50,6 +53,9 @@ export default function DashboardPage() {
     try {
       const classId = await joinClassByCode(classCode.toUpperCase());
       if (classId) {
+        // Set as student
+        localStorage.setItem('userRole', 'student');
+        // Direct join - no lobby
         router.push(`/classroom/${classId}`);
       } else {
         alert('Class not found. Please check the code and try again.');

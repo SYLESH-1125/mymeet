@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import JitsiFrame from "@/components/classroom/jitsi-frame"
+import WebRTCVideo from "@/components/classroom/webrtc-video"
 import { useAuth } from "@/hooks/useAuth"
 import { Mic, MicOff, Hand, PhoneOff, Send, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -18,7 +18,7 @@ export function StudentView({ classId }: { classId: string }) {
   const [handRaised, setHandRaised] = useState(false)
   const [doubt, setDoubt] = useState("")
   const [showDoubtBox, setShowDoubtBox] = useState(false)
-  const [teacherMode] = useState<"video" | "code" | "whiteboard">("video") // Synced from teacher
+  const [teacherMode] = useState<"video" | "code" | "whiteboard">("video") // Synced from teacher via Firestore
   const [studentCount] = useState(0)
   const [isClassActive] = useState(true)
 
@@ -52,16 +52,14 @@ export function StudentView({ classId }: { classId: string }) {
           {/* Teacher's Content Area */}
           <div className="flex-1 rounded-2xl overflow-hidden shadow-2xl">
             {teacherMode === "video" && user && (
-              <JitsiFrame
-                roomName={`edumeet-${classId}`}
-                userDisplayName={user.displayName || 'Student'}
-                userEmail={user.email || ''}
+              <WebRTCVideo
+                roomId={classId}
+                userName={user.displayName || 'Student'}
                 isTeacher={false}
-                onReady={() => console.log('Student joined Jitsi')}
               />
             )}
-            {teacherMode === "code" && <CodeEditor />}
-            {teacherMode === "whiteboard" && <Whiteboard />}
+            {teacherMode === "code" && <CodeEditor classId={classId} isTeacher={false} />}
+            {teacherMode === "whiteboard" && <Whiteboard classId={classId} isTeacher={false} />}
           </div>
 
           {/* Ask Doubt Section */}

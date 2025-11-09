@@ -3,6 +3,7 @@
 import { useRoomState } from '@/hooks/useRoomState';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import PresentNowButton from './present-now-button';
 import {
   Presentation,
   Pencil,
@@ -81,6 +82,9 @@ export function ClassroomControls({
 
       {isTeacher && (
         <div className="flex items-center gap-3">
+          {/* NX-MEET Style "Present Now" Button */}
+          <PresentNowButton isTeacher={isTeacher} />
+          
           {/* Mode selector */}
           <div className="flex gap-2 border rounded p-1">
             <Button
