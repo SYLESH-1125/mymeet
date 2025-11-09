@@ -15,10 +15,10 @@ interface LazyExcalidrawProps {
 }
 
 const LoadingSkeleton = memo(() => (
-  <div className="w-full h-full flex items-center justify-center bg-white">
+  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100">
     <div className="text-center space-y-4">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
-      <div className="text-zinc-700 text-sm">Loading whiteboard...</div>
+      <div className="text-zinc-700 text-sm font-medium">Loading whiteboard...</div>
     </div>
   </div>
 ));
@@ -61,6 +61,14 @@ const MemoizedExcalidraw = memo(({ isTeacher, onChange }: LazyExcalidrawProps) =
       zenModeEnabled={false}
       gridModeEnabled={true}
       theme="light"
+      initialData={{
+        appState: {
+          zoom: { value: 1 }, // Start at 100% zoom
+          scrollX: 0,
+          scrollY: 0,
+        },
+        scrollToContent: false,
+      }}
     />
   );
 });

@@ -2,58 +2,50 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { CodeEditor } from "@/components/classroom/code-editor"
 import { Whiteboard } from "@/components/classroom/whiteboard"
 import { TeacherSidebar } from "@/components/classroom/teacher-sidebar"
 import WebRTCVideo from "@/components/classroom/webrtc-video"
 import { useAuth } from "@/hooks/useAuth"
-import { Mic, MicOff, Video, VideoOff, Monitor, Pencil, Code2, PhoneOff, Users, Play, Square } from "lucide-react"
+import { useClassPresence } from "@/hooks/useClassPresence"
+import { Mic, MicOff, Video, VideoOff, Monitor, Pencil, PhoneOff, Users, Play, Square } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 
 export function TeacherView({ classId }: { classId: string }) {
   const router = useRouter()
   const { user } = useAuth()
-  const [mode, setMode] = useState<"video" | "code" | "whiteboard">("video")
-  const [isMuted, setIsMuted] = useState(false)
-  const [isVideoOff, setIsVideoOff] = useState(false)
-  const [isClassActive, setIsClassActive] = useState(false)
-  const [studentCount] = useState(0) // Will be updated via Firestore
+  const [mode, setMode] = useState<"video" | "whiteboard">("video")
+  const { studentCount } = useClassPresence(classId, true)
 
   return (
-    <div className="flex-1 flex overflow-hidden">
-      {/* Top bar with mode switcher */}
+    <div className="flex h-screen bg-zinc-950">
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
-        <div className="bg-zinc-900/50 backdrop-blur-sm border-b border-zinc-800 px-6 py-3 flex items-center justify-between">
+        {/* Top bar with mode switcher */}
+        <div className="bg-zinc-900/50 backdrop-blur-sm border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button
-              variant={mode === 'video' ? 'default' : 'ghost'}
+              variant={mode === "video" ? "default" : "ghost"}
               size="sm"
               onClick={() => setMode('video')}
+              className={mode === "video" ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "hover:bg-zinc-800"}
             >
               <Video className="w-4 h-4 mr-2" />
               Video
             </Button>
             <Button
-              variant={mode === 'whiteboard' ? 'default' : 'ghost'}
+              variant={mode === "whiteboard" ? "default" : "ghost"}
               size="sm"
               onClick={() => setMode('whiteboard')}
+              className={mode === "whiteboard" ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "hover:bg-zinc-800"}
             >
               <Pencil className="w-4 h-4 mr-2" />
               Whiteboard
             </Button>
-            <Button
-              variant={mode === 'code' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setMode('code')}
-            >
-              <Code2 className="w-4 h-4 mr-2" />
-              Code
-            </Button>
           </div>
-          <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 gap-2 px-3 py-1.5">
+          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-2 px-4 py-2 text-sm">
             <Users className="w-4 h-4" />
-            {studentCount} Students
+            {studentCount} Students Online
           </Badge>
         </div>
 
@@ -69,11 +61,10 @@ export function TeacherView({ classId }: { classId: string }) {
           {mode === 'whiteboard' && (
             <Whiteboard classId={classId} isTeacher={true} />
           )}
-          {mode === 'code' && (
-            <CodeEditor classId={classId} isTeacher={true} />
-          )}
         </div>
-      </div>      {/* Right Sidebar - Tabbed Interface */}
+      </div>
+      
+      {/* Right Sidebar */}
       <TeacherSidebar classId={classId} />
     </div>
   )

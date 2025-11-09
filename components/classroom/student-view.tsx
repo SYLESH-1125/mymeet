@@ -5,10 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import WebRTCVideo from "@/components/classroom/webrtc-video"
+import TeacherStreamViewer from "@/components/classroom/teacher-stream-viewer"
 import { useAuth } from "@/hooks/useAuth"
+import { useClassPresence } from "@/hooks/useClassPresence"
+import { useTeacherStream } from "@/hooks/useTeacherStream"
+import { useDoubtsLive } from "@/hooks/useDoubtsLive"
 import { Mic, MicOff, Hand, PhoneOff, Send, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { CodeEditor } from "@/components/classroom/code-editor"
 import { Whiteboard } from "@/components/classroom/whiteboard"
 
 export function StudentView({ classId }: { classId: string }) {
@@ -18,30 +21,37 @@ export function StudentView({ classId }: { classId: string }) {
   const [handRaised, setHandRaised] = useState(false)
   const [doubt, setDoubt] = useState("")
   const [showDoubtBox, setShowDoubtBox] = useState(false)
-  const [teacherMode] = useState<"video" | "code" | "whiteboard">("video") // Synced from teacher via Firestore
-  const [studentCount] = useState(0)
+  const [teacherMode] = useState<"video" | "whiteboard">("video") // Synced from teacher via Firestore
+  const { studentCount } = useClassPresence(classId, false)
+  const { teacherStream } = useTeacherStream(classId)
+  const { submitDoubt } = useDoubtsLive(classId)
   const [isClassActive] = useState(true)
 
-  const handleSubmitDoubt = () => {
+  const handleSubmitDoubt = async () => {
     if (doubt.trim()) {
-      // Handle doubt submission
-      setDoubt("")
-      setShowDoubtBox(false)
+      try {
+        await submitDoubt(doubt)
+        setDoubt("")
+        setShowDoubtBox(false)
+        alert("Doubt submitted to teacher!")
+      } catch (error) {
+        alert("Failed to submit doubt")
+      }
     }
   }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Top Bar with Student Count */}
-      <div className="bg-zinc-900/50 backdrop-blur-sm border-b border-zinc-800 px-6 py-3 flex items-center justify-between">
-        <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 gap-2 px-3 py-1.5">
+      <div className="bg-zinc-900/50 backdrop-blur-sm border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
+        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-2 px-4 py-2">
           <Users className="w-4 h-4" />
           {studentCount} Students Attending
         </Badge>
         {isClassActive && (
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm text-zinc-400">Class in Session</span>
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-sm text-emerald-400 font-medium">Live</span>
           </div>
         )}
       </div>
@@ -51,14 +61,12 @@ export function StudentView({ classId }: { classId: string }) {
         <div className="w-full max-w-6xl h-full flex flex-col gap-6">
           {/* Teacher's Content Area */}
           <div className="flex-1 rounded-2xl overflow-hidden shadow-2xl">
-            {teacherMode === "video" && user && (
-              <WebRTCVideo
+            {teacherMode === "video" && (
+              <TeacherStreamViewer
                 roomId={classId}
-                userName={user.displayName || 'Student'}
-                isTeacher={false}
+                teacherName="Teacher"
               />
             )}
-            {teacherMode === "code" && <CodeEditor classId={classId} isTeacher={false} />}
             {teacherMode === "whiteboard" && <Whiteboard classId={classId} isTeacher={false} />}
           </div>
 

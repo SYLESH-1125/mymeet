@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Monitor, MonitorOff, Video, VideoOff } from 'lucide-react';
+import { useTeacherStream } from '@/hooks/useTeacherStream';
 
 interface WebRTCVideoProps {
   roomId: string;
@@ -17,6 +18,8 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  
+  const { teacherStream, updateTeacherStream } = useTeacherStream(roomId);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -42,6 +45,11 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
         }
         
         setIsAudioEnabled(true);
+        
+        // Notify students that teacher's audio is on
+        if (isTeacher) {
+          updateTeacherStream({ audioEnabled: true });
+        }
       } catch (error) {
         console.error('Error accessing microphone:', error);
         alert('Could not access microphone. Please check permissions.');
@@ -54,6 +62,11 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
         });
       }
       setIsAudioEnabled(false);
+      
+      // Notify students that teacher's audio is off
+      if (isTeacher) {
+        updateTeacherStream({ audioEnabled: false });
+      }
     }
   };
 
@@ -81,6 +94,11 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
         }
         
         setIsVideoEnabled(true);
+        
+        // Notify students that teacher's video is on
+        if (isTeacher) {
+          updateTeacherStream({ videoEnabled: true, shareType: 'camera' });
+        }
       } catch (error) {
         console.error('Error accessing camera:', error);
         alert('Could not access camera. Please check permissions.');
@@ -96,6 +114,11 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
         }
       }
       setIsVideoEnabled(false);
+      
+      // Notify students that teacher's video is off
+      if (isTeacher) {
+        updateTeacherStream({ videoEnabled: false, shareType: 'none' });
+      }
     }
   };
 
@@ -123,11 +146,20 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
         setIsScreenSharing(true);
         setIsVideoEnabled(false); // Can't have both
         
+        // Notify students that teacher is sharing screen
+        if (isTeacher) {
+          updateTeacherStream({ isSharing: true, shareType: 'screen' });
+        }
+        
         // Handle when user stops sharing from browser UI
         stream.getVideoTracks()[0].onended = () => {
           setIsScreenSharing(false);
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = null;
+          }
+          // Notify students that sharing stopped
+          if (isTeacher) {
+            updateTeacherStream({ isSharing: false, shareType: 'none' });
           }
         };
       } catch (error) {
@@ -145,6 +177,11 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
         localVideoRef.current.srcObject = null;
       }
       setIsScreenSharing(false);
+      
+      // Notify students that sharing stopped
+      if (isTeacher) {
+        updateTeacherStream({ isSharing: false, shareType: 'none' });
+      }
     }
   };
 
@@ -152,7 +189,7 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
     <div className="relative w-full h-full bg-zinc-900 flex flex-col items-center justify-center">
       {/* Video Display */}
       <div className="flex-1 w-full flex items-center justify-center p-4">
-        {(isVideoEnabled || isScreenSharing) && localVideoRef.current?.srcObject ? (
+        {(isVideoEnabled || isScreenSharing) ? (
           <video
             ref={localVideoRef}
             autoPlay
@@ -174,6 +211,11 @@ export default function WebRTCVideo({ roomId, userName, isTeacher }: WebRTCVideo
             {isTeacher && (
               <p className="text-sm text-zinc-500 mt-4">
                 Click controls below to start presenting
+              </p>
+            )}
+            {!isTeacher && teacherStream.isSharing && (
+              <p className="text-sm text-green-500 mt-4 animate-pulse">
+                Teacher is {teacherStream.shareType === 'screen' ? 'sharing screen' : 'on camera'}
               </p>
             )}
           </div>

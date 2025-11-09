@@ -42,6 +42,18 @@ service cloud.firestore {
           get(/databases/$(database)/documents/classes/$(classId)).data.ownerUid == request.auth.uid;
       }
       
+      // Live state subcollection (teacher stream status)
+      match /liveState/{stateDoc} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null;
+      }
+      
+      // Whiteboard subcollection
+      match /whiteboard/{whiteboardDoc} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null;
+      }
+      
       // Code document subcollection
       match /codeDoc/{docId} {
         allow read: if request.auth != null;
